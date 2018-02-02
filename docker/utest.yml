@@ -1,0 +1,8 @@
+version: "3"
+services:
+  build:
+    image: globaldevtools.bbva.com:5000/base/icuzr/docker-debian-waveform-builder:feature-1.8.3
+    working_dir: /go/src/github.com/flight
+    volumes:
+      - $PWD:/go/src/github.com/flight
+    command: bash -c "./docker/scripts/runUTest.sh"

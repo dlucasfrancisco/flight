@@ -1,0 +1,52 @@
+# TODO - Docker compose 3 does not support service healthy yet: https://github.com/moby/moby/issues/30404
+version: "2.1"
+services:
+  waveform-database:
+    image: globaldevtools.bbva.com:5000/base/icuzr/docker-cassandra:feature-3.1.1
+    volumes:
+      - $PWD/database/waveform_clusters/migrations:/waveform_clusters/migrations
+    healthcheck:
+      test: cqlsh -e "DESCRIBE KEYSPACE waveform_clusters"
+      interval: 4s
+      timeout: 30s
+      retries: 25
+    environment:
+      - CASSANDRA_KEYSPACES=waveform_clusters
+      - CASSANDRA_HOSTS=waveform-database
+  
+################################################===CLUSTER===###########################################################
+  cluster-service:
+    image: globaldevtools.bbva.com:5000/base/icuzr/docker-alpine-waveform-runner
+    working_dir: /go/src/github.com/flight
+    volumes:
+      - $PWD:/go/src/github.com/flight
+    environment:
+          - PORT=8080
+          - CASSANDRA_HOSTS=waveform-database
+          - CASSANDRA_KEYSPACE=waveform_clusters
+    command: bash -c "./bin/clustersd"
+    depends_on:
+       waveform-database:
+         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://cluster-service:8080/v1/health"]
+      interval: 4s
+      timeout: 30s
+      retries: 15
+ ################################################===E2E-test===###########################################################
+  e2e:
+    image: globaldevtools.bbva.com:5000/base/icuzr/docker-debian-waveform-builder:feature-1.8.3
+    working_dir: /go/src/github.com/flight
+    environment:
+      - TARGET_HOST_CLUSTER=cluster-service
+      - TARGET_PORT_CLUSTER=:8080
+      - TARGET_HOST_EPACO=epaco-service
+      - TARGET_PORT_EPACO=:8080
+    volumes:
+      - $PWD:/go/src/github.com/flight
+    depends_on:
+      cluster-service:
+         condition: service_healthy
+      waveform-database:
+         condition: service_healthy
+    command: bash -c "./docker/scripts/runE2ETest.sh"

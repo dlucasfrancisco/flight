@@ -1,0 +1,24 @@
+package: github.com/flight
+import:
+- package: github.com/gorilla/mux
+  version: v1.4.0
+- package: github.com/stretchr/testify
+  version: v1.1.4
+- package: github.com/satori/go.uuid
+  version: v1.1.0
+- package: github.com/spf13/pflag
+  version: ~1.0.0
+- package: github.com/spf13/cobra
+  version: 50204810fdb5010baae72e4f41b303689cbdcc9f
+- package: github.com/spf13/viper
+
+testImport:
+- package: github.com/onsi/gomega
+  version: v1.1.0
+- package: github.com/onsi/ginkgo
+  version: v1.3.1
+  subpackages:
+  - ginkgo
+
+ignore:
+- github.com/flight/mocks

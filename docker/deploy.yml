@@ -1,0 +1,40 @@
+version: "2.1"
+services:
+################################################===EPACO===###########################################################
+  waveform-database:
+    image: globaldevtools.bbva.com:5000/base/icuzr/docker-cassandra:feature-3.1.1
+    volumes:
+      - $PWD/database/waveform_epacos/migrations:/waveform_epacos/migrations
+      - $PWD/database/waveform_clusters/migrations:/waveform_clusters/migrations
+    healthcheck:
+      test: cqlsh -e "DESCRIBE KEYSPACE waveform_clusters"
+      interval: 4s
+      timeout: 30s
+      retries: 25
+    environment:
+      - CASSANDRA_KEYSPACES=waveform_epacos,waveform_clusters
+      - CASSANDRA_HOSTS=waveform-database
+  epaco-service:
+    image: globaldevtools.bbva.com:5000/base/icuzr/docker-alpine-waveform-runner
+    working_dir: /go/src/github.com/flight
+    volumes:
+      - $PWD:/go/src/github.com/flight
+    environment:
+          - PORT=8080
+          - CASSANDRA_HOSTS=waveform-database
+          - CASSANDRA_KEYSPACE=waveform_pacor
+    command: sh -c "./bin/epacosd"
+    depends_on:
+       waveform-database:
+         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-O", "-", "http://epaco-service:8080/v1/health"]
+      interval: 4s
+      timeout: 30s
+      retries: 15
+################################################===CLUSTER===###########################################################
+  cluster-service:
+    image: globaldevtools.bbva.com:5000/base/icuzr/docker-alpine-waveform-runner
+    working_dir: /go/src/github.com/flight
+    volumes:
+      - $PWD:/go/src/github.com/flight
